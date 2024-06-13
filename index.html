@@ -43,7 +43,7 @@
     <div id="loading-bar-text">Loading...</div>
 
     <!-- Model Viewer for AR (only for mobile) -->
-    <model-viewer id="ar-viewer" src="https://sunshinevendetta.github.io/diabloroom/output.glb" ar ar-modes="scene-viewer quick-look webxr" camera-controls 
+    <model-viewer id="ar-viewer" src="https://ipfs.io/ipfs/QmZNvL1r2EF5cWMeus2BDLuZuLbPCJ36CxDUxsan8mLeeE/output.glb" ar ar-modes="scene-viewer quick-look webxr" camera-controls 
                   alt="A 3D model of a room" style="width: 100%; height: 100vh; display: none;"></model-viewer>
 
     <script>
@@ -88,7 +88,7 @@
         const loader = new THREE.GLTFLoader();
         loader.setDRACOLoader(dracoLoader);
         loader.load(
-            'https://raw.githack.com/sunshinevendetta/diabloroom/main/output.glb',
+            'https://ipfs.io/ipfs/QmZNvL1r2EF5cWMeus2BDLuZuLbPCJ36CxDUxsan8mLeeE/output.glb',
             function (gltf) {
                 const model = gltf.scene;
                 const animations = gltf.animations;
