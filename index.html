@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diablos Room 1</title>
+    <link rel="icon" href="data:,"> <!-- Suppress favicon request -->
+    <style>
+        body { margin: 0; background-color: black; } <!-- Set background color to black -->
+        canvas { display: block; }
+    </style>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+</head>
+<body>
+    <!-- Model Viewer for AR -->
+    <model-viewer id="ar-viewer" src="output.glb" ar ar-modes="scene-viewer quick-look webxr" camera-controls 
+                  alt="A 3D model of a room" style="width: 100%; height: 100vh; display: none;"></model-viewer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.LinearToneMapping;
+        renderer.toneMappingExposure = Math.pow(2, -15); // Adjusted exposure to match glTF Viewer
+        renderer.outputEncoding = THREE.sRGBEncoding; // Ensure correct color encoding
+        document.body.appendChild(renderer.domElement);
+
+        // Orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // Enable smooth controls
+        controls.dampingFactor = 0.25;
+        controls.screenSpacePanning = false;
+        controls.maxPolarAngle = Math.PI / 2;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Adjusted ambient light intensity
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5); // Adjusted directional light intensity
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
+
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 2.5); // Adjusted second directional light intensity
+        directionalLight2.position.set(-5, -10, -7.5);
+        scene.add(directionalLight2);
+
+        // Load GLB model with DRACOLoader
+        const dracoLoader = new THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/'); // Draco decoder path
+
+        const loader = new THREE.GLTFLoader();
+        loader.setDRACOLoader(dracoLoader);
+        loader.load('output.glb', function (gltf) {
+            const model = gltf.scene;
+            const animations = gltf.animations;
+
+            scene.add(model);
+            model.position.set(0, -1, 0);
+
+            // Animation setup
+            if (animations && animations.length) {
+                const mixer = new THREE.AnimationMixer(model);
+                animations.forEach(clip => {
+                    mixer.clipAction(clip).play();
+                });
+                function animate() {
+                    requestAnimationFrame(animate);
+                    mixer.update(0.016); // Update the animation mixer
+                    controls.update(); // Update controls
+                    renderer.render(scene, camera);
+                }
+                animate();
+            } else {
+                function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update(); // Update controls
+                    renderer.render(scene, camera);
+                }
+                animate();
+            }
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        camera.position.z = 5;
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        });
+
+        // Switch to AR viewer when on mobile
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            document.getElementById('ar-viewer').style.display = 'block';
+            renderer.domElement.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
