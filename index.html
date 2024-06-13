@@ -8,18 +8,44 @@
     <style>
         body { margin: 0; background-color: black; } <!-- Set background color to black -->
         canvas { display: block; }
+        #loading-bar-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: #000;
+        }
+        #loading-bar {
+            width: 0;
+            height: 100%;
+            background-color: #fff;
+        }
+        #loading-bar-text {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
     </style>
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-</head>
-<body>
-    <!-- Model Viewer for AR -->
-    <model-viewer id="ar-viewer" src="output.glb" ar ar-modes="scene-viewer quick-look webxr" camera-controls 
-                  alt="A 3D model of a room" style="width: 100%; height: 100vh; display: none;"></model-viewer>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <!-- Loading Bar -->
+    <div id="loading-bar-container">
+        <div id="loading-bar"></div>
+    </div>
+    <div id="loading-bar-text">Loading...</div>
+
+    <!-- Model Viewer for AR (only for mobile) -->
+    <model-viewer id="ar-viewer" src="output.glb" ar ar-modes="scene-viewer quick-look webxr" camera-controls 
+                  alt="A 3D model of a room" style="width: 100%; height: 100vh; display: none;"></model-viewer>
+
     <script>
         // Scene setup
         const scene = new THREE.Scene();
@@ -50,43 +76,65 @@
         directionalLight2.position.set(-5, -10, -7.5);
         scene.add(directionalLight2);
 
+        // Loading Bar
+        const loadingBarContainer = document.getElementById('loading-bar-container');
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingBarText = document.getElementById('loading-bar-text');
+
         // Load GLB model with DRACOLoader
         const dracoLoader = new THREE.DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/'); // Draco decoder path
 
         const loader = new THREE.GLTFLoader();
         loader.setDRACOLoader(dracoLoader);
-        loader.load('output.glb', function (gltf) {
-            const model = gltf.scene;
-            const animations = gltf.animations;
+        loader.load(
+            'output.glb',
+            function (gltf) {
+                const model = gltf.scene;
+                const animations = gltf.animations;
 
-            scene.add(model);
-            model.position.set(0, -1, 0);
+                scene.add(model);
+                model.position.set(0, -1, 0);
 
-            // Animation setup
-            if (animations && animations.length) {
-                const mixer = new THREE.AnimationMixer(model);
-                animations.forEach(clip => {
-                    mixer.clipAction(clip).play();
-                });
-                function animate() {
-                    requestAnimationFrame(animate);
-                    mixer.update(0.016); // Update the animation mixer
-                    controls.update(); // Update controls
-                    renderer.render(scene, camera);
+                // Animation setup
+                if (animations && animations.length) {
+                    const mixer = new THREE.AnimationMixer(model);
+                    animations.forEach(clip => {
+                        mixer.clipAction(clip).play();
+                    });
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        mixer.update(0.016); // Update the animation mixer
+                        controls.update(); // Update controls
+                        renderer.render(scene, camera);
+                    }
+                    animate();
+                } else {
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        controls.update(); // Update controls
+                        renderer.render(scene, camera);
+                    }
+                    animate();
                 }
-                animate();
-            } else {
-                function animate() {
-                    requestAnimationFrame(animate);
-                    controls.update(); // Update controls
-                    renderer.render(scene, camera);
+
+                // Hide loading bar
+                loadingBarContainer.style.display = 'none';
+                loadingBarText.style.display = 'none';
+            },
+            function (xhr) {
+                // Update loading bar
+                if (xhr.lengthComputable) {
+                    const progress = (xhr.loaded / xhr.total) * 100;
+                    loadingBar.style.width = progress + '%';
+                    loadingBarText.innerText = `Loading... ${Math.round(progress)}%`;
                 }
-                animate();
+            },
+            function (error) {
+                console.error('An error happened', error);
+                loadingBarText.innerText = "Error loading model";
             }
-        }, undefined, function (error) {
-            console.error(error);
-        });
+        );
 
         camera.position.z = 5;
 
